@@ -111,6 +111,8 @@ public class AsyncTask<Result> extends Observable {
 		default void onCancelled() {}
 	}
 
+	public AsyncTask() {}
+
 	public AsyncTask(AsyncTask.Delegate<Result> delegate) {
 		initializeTask(delegate);
 	}
