@@ -115,7 +115,13 @@ public class AsyncTask<Result> extends Observable {
 		initializeTask(delegate);
 	}
 
-	public void initializeTask(AsyncTaskDelegate<Result> delegate) {
+	/**
+	 * <p>Initialize task for reuse convenience.</p>
+	 * <p>Warning: Check status first, if the task is running, you cannot change
+	 * the delegate using initialize method.</p>
+	 * @param delegate task delegate {@link AsyncTaskDelegate}
+	 */
+	private void initializeTask(AsyncTaskDelegate<Result> delegate) {
 		if (mStatus != Status.RUNNING) {
 			this.delegate = delegate;
 
@@ -138,6 +144,20 @@ public class AsyncTask<Result> extends Observable {
 		} else {
 			throw new IllegalStateException("Cannot Initialize task: the task is still running");
 		}
+	}
+
+	/**
+	 * <p>Initialize task for reuse convenience. Returns self for chaining.</p>
+	 * <p>Warning: Check status first, if the task is running, you cannot change
+	 * the delegate using initialize method.</p>
+	 * @param delegate task delegate {@link AsyncTaskDelegate}.
+	 *
+	 * @return self for chaining.
+	 */
+	@SuppressWarnings("UnusedReturnValue")
+	public AsyncTask<Result> initializeTaskForChaining(AsyncTaskDelegate<Result> delegate) {
+		initializeTask(delegate);
+		return this;
 	}
 
 	/**
@@ -214,13 +234,11 @@ public class AsyncTask<Result> extends Observable {
 	 * <p>This method must be invoked on the main thread.
 	 *
 	 * @param exec The executor to use.
-	 * @return This instance of AsyncTask.
 	 * @throws IllegalStateException If {@link #getStatus()} returns either
 	 *                               {@link AsyncTask.Status#RUNNING} or {@link AsyncTask.Status#FINISHED}.
 	 */
-	@Contract("_ -> this")
 	@SuppressWarnings({"MissingCasesInEnumSwitch"})
-	public final AsyncTask<Result> executeOnExecutor(Executor exec) {
+	public final void executeOnExecutor(Executor exec) {
 		if (mStatus != Status.PENDING) {
 			switch (mStatus) {
 				case RUNNING:
@@ -238,8 +256,6 @@ public class AsyncTask<Result> extends Observable {
 		delegate.onPreExecute();
 
 		exec.execute(mFuture);
-
-		return this;
 	}
 
 	/**
