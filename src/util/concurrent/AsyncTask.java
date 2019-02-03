@@ -119,12 +119,14 @@ public abstract class AsyncTask<Result> extends Observable {
 
 			Callable<Result> mWorker = () -> {
 				mTaskInvoked.set(true);
-				Result result;
+				Result result = null;
 				try {
 					result = delegate.doInBackground();
 				} catch (Exception tr) {
 					mCancelled.set(true);
 					throw tr;
+				} finally {
+					postResult(result);
 				}
 
 				return result;
