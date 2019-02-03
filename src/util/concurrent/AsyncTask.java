@@ -18,7 +18,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 public abstract class AsyncTask<Result> extends Observable {
 
-	private final FutureTask<Result> mFuture;
+	private AsyncTaskDelegate<Result> delegate;
+
+	private FutureTask<Result> mFuture;
 
 	private volatile Status mStatus = Status.PENDING;
 
@@ -39,27 +41,99 @@ public abstract class AsyncTask<Result> extends Observable {
 		 */
 		RUNNING,
 		/**
-		 * Indicates that {@link AsyncTask#onPostExecute} has finished.
+		 * Indicates that {@link AsyncTaskDelegate#onPostExecute} has finished.
 		 */
 		FINISHED,
 	}
 
-	public AsyncTask() {
+	public interface AsyncTaskDelegate<Result> {
+		/**
+		 * Override this method to perform a computation on a background thread.
+		 *
+		 * @return A result, defined by the subclass of this task.
+		 * @see #onPreExecute()
+		 * @see #onPostExecute
+		 */
+		Result doInBackground() throws Exception;
 
-		Callable<Result> mWorker = () -> {
-			mTaskInvoked.set(true);
-			Result result;
-			try {
-				result = doInBackground();
-			} catch (Exception tr) {
-				mCancelled.set(true);
-				throw tr;
-			}
+		/**
+		 * Runs on the main thread before {@link #doInBackground}.
+		 *
+		 * @see #onPostExecute
+		 * @see #doInBackground
+		 */
+		default void onPreExecute() {}
 
-			return result;
-		};
+		/**
+		 * <p>Runs on the main thread after {@link #doInBackground}. The
+		 * specified result is the value returned by {@link #doInBackground}.</p>
+		 *
+		 * <p>This method won't be invoked if the task was cancelled.</p>
+		 *
+		 * @param result The result of the operation computed by {@link #doInBackground}.
+		 * @see #onPreExecute
+		 * @see #doInBackground
+		 * @see #onCancelled(Object)
+		 */
+		default void onPostExecute(Result result) {}
 
-		mFuture = new NamedFutureTask(mWorker);
+		/**
+		 * <p>Runs on the main thread after {@link #cancel(boolean)} is invoked and
+		 * {@link #doInBackground()} has finished.</p>
+		 *
+		 * <p>The default implementation simply invokes {@link #onCancelled()} and
+		 * ignores the result. If you write your own implementation, do not call
+		 * <code>super.onCancelled(result)</code>.</p>
+		 *
+		 * @param result The result, if any, computed in
+		 *               {@link #doInBackground()}, can be null
+		 * @see #cancel(boolean)
+		 * @see #isCancelled()
+		 */
+		default void onCancelled(Result result) {
+			onCancelled();
+		}
+
+		/**
+		 * <p>Applications should preferably override {@link #onCancelled(Object)}.
+		 * This method is invoked by the default implementation of
+		 * {@link #onCancelled(Object)}.</p>
+		 *
+		 * <p>Runs on the main thread after {@link #cancel(boolean)} is invoked and
+		 * {@link #doInBackground()} has finished.</p>
+		 *
+		 * @see #onCancelled(Object)
+		 * @see #cancel(boolean)
+		 * @see #isCancelled()
+		 */
+		default void onCancelled() {}
+	}
+
+	public AsyncTask(AsyncTaskDelegate<Result> delegate) {
+		initializeTask(delegate);
+	}
+
+	public void initializeTask(AsyncTaskDelegate<Result> delegate) {
+		if (mStatus != Status.RUNNING) {
+			this.delegate = delegate;
+
+			Callable<Result> mWorker = () -> {
+				mTaskInvoked.set(true);
+				Result result;
+				try {
+					result = delegate.doInBackground();
+				} catch (Exception tr) {
+					mCancelled.set(true);
+					throw tr;
+				}
+
+				return result;
+			};
+
+			mFuture = new NamedFutureTask(mWorker);
+		} else {
+			throw new IllegalStateException("Cannot Initialize task: the task is still running");
+		}
 	}
 
 	/**
@@ -72,76 +146,10 @@ public abstract class AsyncTask<Result> extends Observable {
 	}
 
 	/**
-	 * Override this method to perform a computation on a background thread.
-	 *
-	 * @return A result, defined by the subclass of this task.
-	 * @see #onPreExecute()
-	 * @see #onPostExecute
-	 */
-	protected abstract Result doInBackground() throws Exception;
-
-	/**
-	 * Runs on the main thread before {@link #doInBackground}.
-	 *
-	 * @see #onPostExecute
-	 * @see #doInBackground
-	 */
-	protected void onPreExecute() {
-	}
-
-	/**
-	 * <p>Runs on the main thread after {@link #doInBackground}. The
-	 * specified result is the value returned by {@link #doInBackground}.</p>
-	 *
-	 * <p>This method won't be invoked if the task was cancelled.</p>
-	 *
-	 * @param result The result of the operation computed by {@link #doInBackground}.
-	 * @see #onPreExecute
-	 * @see #doInBackground
-	 * @see #onCancelled(Object)
-	 */
-	@SuppressWarnings({"UnusedDeclaration"})
-	protected void onPostExecute(Result result) {
-	}
-
-	/**
-	 * <p>Runs on the main thread after {@link #cancel(boolean)} is invoked and
-	 * {@link #doInBackground()} has finished.</p>
-	 *
-	 * <p>The default implementation simply invokes {@link #onCancelled()} and
-	 * ignores the result. If you write your own implementation, do not call
-	 * <code>super.onCancelled(result)</code>.</p>
-	 *
-	 * @param result The result, if any, computed in
-	 *               {@link #doInBackground()}, can be null
-	 * @see #cancel(boolean)
-	 * @see #isCancelled()
-	 */
-	@SuppressWarnings({"UnusedParameters"})
-	protected void onCancelled(Result result) {
-		onCancelled();
-	}
-
-	/**
-	 * <p>Applications should preferably override {@link #onCancelled(Object)}.
-	 * This method is invoked by the default implementation of
-	 * {@link #onCancelled(Object)}.</p>
-	 *
-	 * <p>Runs on the main thread after {@link #cancel(boolean)} is invoked and
-	 * {@link #doInBackground()} has finished.</p>
-	 *
-	 * @see #onCancelled(Object)
-	 * @see #cancel(boolean)
-	 * @see #isCancelled()
-	 */
-	protected void onCancelled() {
-	}
-
-	/**
 	 * Returns <tt>true</tt> if this task was cancelled before it completed
 	 * normally. If you are calling {@link #cancel(boolean)} on the task,
 	 * the value returned by this method should be checked periodically from
-	 * {@link #doInBackground()} to end the task as soon as possible.
+	 * {@link AsyncTaskDelegate#doInBackground()} to end the task as soon as possible.
 	 *
 	 * @return <tt>true</tt> if task was cancelled before it completed
 	 * @see #cancel(boolean)
@@ -160,12 +168,12 @@ public abstract class AsyncTask<Result> extends Observable {
 	 * whether the thread executing this task should be interrupted in
 	 * an attempt to stop the task.</p>
 	 *
-	 * <p>Calling this method will result in {@link #onCancelled(Object)} being
-	 * invoked on the main thread after {@link #doInBackground()}
-	 * returns. Calling this method guarantees that {@link #onPostExecute(Object)}
+	 * <p>Calling this method will result in {@link AsyncTaskDelegate#onCancelled(Object)}
+	 * being invoked on the main thread after {@link AsyncTaskDelegate#doInBackground()}
+	 * returns. Calling this method guarantees that {@link AsyncTaskDelegate#onPostExecute(Object)}
 	 * is never invoked. After invoking this method, you should check the
 	 * value returned by {@link #isCancelled()} periodically from
-	 * {@link #doInBackground()} to finish the task as early as
+	 * {@link AsyncTaskDelegate#doInBackground()} to finish the task as early as
 	 * possible.</p>
 	 *
 	 * @param mayInterruptIfRunning <tt>true</tt> if the thread executing this
@@ -175,7 +183,7 @@ public abstract class AsyncTask<Result> extends Observable {
 	 * typically because it has already completed normally;
 	 * <tt>true</tt> otherwise
 	 * @see #isCancelled()
-	 * @see #onCancelled(Object)
+	 * @see AsyncTaskDelegate#onCancelled(Object)
 	 */
 	public final boolean cancel(boolean mayInterruptIfRunning) {
 		mCancelled.set(true);
@@ -223,7 +231,7 @@ public abstract class AsyncTask<Result> extends Observable {
 
 		mStatus = Status.RUNNING;
 
-		onPreExecute();
+		delegate.onPreExecute();
 
 		exec.execute(mFuture);
 
@@ -271,9 +279,9 @@ public abstract class AsyncTask<Result> extends Observable {
 
 	private void finish(Result result) {
 		if (isCancelled()) {
-			onCancelled(result);
+			delegate.onCancelled(result);
 		} else {
-			onPostExecute(result);
+			delegate.onPostExecute(result);
 		}
 		mStatus = Status.FINISHED;
 		notifyObservers(result);
