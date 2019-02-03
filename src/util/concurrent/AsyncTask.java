@@ -127,7 +127,7 @@ public abstract class AsyncTask<Result> extends Observable {
 	 * This method is invoked by the default implementation of
 	 * {@link #onCancelled(Object)}.</p>
 	 *
-	 * <p>Runs on the UI thread after {@link #cancel(boolean)} is invoked and
+	 * <p>Runs on the main thread after {@link #cancel(boolean)} is invoked and
 	 * {@link #doInBackground()} has finished.</p>
 	 *
 	 * @see #onCancelled(Object)
