@@ -238,7 +238,12 @@ public class AsyncTask<Result> extends Observable {
 	 *                               {@link AsyncTask.Status#RUNNING} or {@link AsyncTask.Status#FINISHED}.
 	 */
 	@SuppressWarnings({"MissingCasesInEnumSwitch"})
-	public final void executeOnExecutor(Executor exec) {
+	public final void executeOnExecutor(@NotNull Executor exec) {
+
+		if (delegate == null) {
+			throw new NullPointerException("No delegate implement");
+		}
+
 		if (mStatus != Status.PENDING) {
 			switch (mStatus) {
 				case RUNNING:
