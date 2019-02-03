@@ -16,7 +16,7 @@ import java.util.Observer;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-public abstract class AsyncTask<Result> extends Observable {
+public class AsyncTask<Result> extends Observable {
 
 	private AsyncTaskDelegate<Result> delegate;
 
