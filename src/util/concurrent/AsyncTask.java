@@ -18,7 +18,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 public abstract class AsyncTask<Result> extends Observable {
 
-	private final Callable<Result> mWorker;
 	private final FutureTask<Result> mFuture;
 
 	private volatile Status mStatus = Status.PENDING;
@@ -47,7 +46,7 @@ public abstract class AsyncTask<Result> extends Observable {
 
 	public AsyncTask() {
 
-		mWorker = () -> {
+		Callable<Result> mWorker = () -> {
 			mTaskInvoked.set(true);
 			Result result;
 			try {
