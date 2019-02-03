@@ -122,6 +122,10 @@ public class AsyncTask<Result> extends Observable {
 	 * @param delegate task delegate {@link AsyncTask.Delegate}
 	 */
 	private void initializeTask(AsyncTask.Delegate<Result> delegate) {
+
+		mCancelled.set(false);
+		mTaskInvoked.set(false);
+
 		if (mStatus != Status.RUNNING) {
 			this.delegate = delegate;
 
