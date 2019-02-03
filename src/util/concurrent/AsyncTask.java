@@ -18,7 +18,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 public class AsyncTask<Result> extends Observable {
 
-	private AsyncTaskDelegate<Result> delegate;
+	private AsyncTask.Delegate<Result> delegate;
 
 	private FutureTask<Result> mFuture;
 
@@ -41,12 +41,12 @@ public class AsyncTask<Result> extends Observable {
 		 */
 		RUNNING,
 		/**
-		 * Indicates that {@link AsyncTaskDelegate#onPostExecute} has finished.
+		 * Indicates that {@link AsyncTask.Delegate#onPostExecute} has finished.
 		 */
 		FINISHED,
 	}
 
-	public interface AsyncTaskDelegate<Result> {
+	public interface Delegate<Result> {
 		/**
 		 * Override this method to perform a computation on a background thread.
 		 *
@@ -111,7 +111,7 @@ public class AsyncTask<Result> extends Observable {
 		default void onCancelled() {}
 	}
 
-	public AsyncTask(AsyncTaskDelegate<Result> delegate) {
+	public AsyncTask(AsyncTask.Delegate<Result> delegate) {
 		initializeTask(delegate);
 	}
 
@@ -119,9 +119,9 @@ public class AsyncTask<Result> extends Observable {
 	 * <p>Initialize task for reuse convenience.</p>
 	 * <p>Warning: Check status first, if the task is running, you cannot change
 	 * the delegate using initialize method.</p>
-	 * @param delegate task delegate {@link AsyncTaskDelegate}
+	 * @param delegate task delegate {@link AsyncTask.Delegate}
 	 */
-	private void initializeTask(AsyncTaskDelegate<Result> delegate) {
+	private void initializeTask(AsyncTask.Delegate<Result> delegate) {
 		if (mStatus != Status.RUNNING) {
 			this.delegate = delegate;
 
@@ -150,12 +150,12 @@ public class AsyncTask<Result> extends Observable {
 	 * <p>Initialize task for reuse convenience. Returns self for chaining.</p>
 	 * <p>Warning: Check status first, if the task is running, you cannot change
 	 * the delegate using initialize method.</p>
-	 * @param delegate task delegate {@link AsyncTaskDelegate}.
+	 * @param delegate task delegate {@link AsyncTask.Delegate}.
 	 *
 	 * @return self for chaining.
 	 */
 	@SuppressWarnings("UnusedReturnValue")
-	public AsyncTask<Result> initializeTaskForChaining(AsyncTaskDelegate<Result> delegate) {
+	public AsyncTask<Result> initializeTaskForChaining(AsyncTask.Delegate<Result> delegate) {
 		initializeTask(delegate);
 		return this;
 	}
@@ -173,7 +173,7 @@ public class AsyncTask<Result> extends Observable {
 	 * Returns <tt>true</tt> if this task was cancelled before it completed
 	 * normally. If you are calling {@link #cancel(boolean)} on the task,
 	 * the value returned by this method should be checked periodically from
-	 * {@link AsyncTaskDelegate#doInBackground()} to end the task as soon as possible.
+	 * {@link AsyncTask.Delegate#doInBackground()} to end the task as soon as possible.
 	 *
 	 * @return <tt>true</tt> if task was cancelled before it completed
 	 * @see #cancel(boolean)
@@ -192,12 +192,12 @@ public class AsyncTask<Result> extends Observable {
 	 * whether the thread executing this task should be interrupted in
 	 * an attempt to stop the task.</p>
 	 *
-	 * <p>Calling this method will result in {@link AsyncTaskDelegate#onCancelled(Object)}
-	 * being invoked on the main thread after {@link AsyncTaskDelegate#doInBackground()}
-	 * returns. Calling this method guarantees that {@link AsyncTaskDelegate#onPostExecute(Object)}
+	 * <p>Calling this method will result in {@link AsyncTask.Delegate#onCancelled(Object)}
+	 * being invoked on the main thread after {@link AsyncTask.Delegate#doInBackground()}
+	 * returns. Calling this method guarantees that {@link AsyncTask.Delegate#onPostExecute(Object)}
 	 * is never invoked. After invoking this method, you should check the
 	 * value returned by {@link #isCancelled()} periodically from
-	 * {@link AsyncTaskDelegate#doInBackground()} to finish the task as early as
+	 * {@link AsyncTask.Delegate#doInBackground()} to finish the task as early as
 	 * possible.</p>
 	 *
 	 * @param mayInterruptIfRunning <tt>true</tt> if the thread executing this
@@ -207,7 +207,7 @@ public class AsyncTask<Result> extends Observable {
 	 * typically because it has already completed normally;
 	 * <tt>true</tt> otherwise
 	 * @see #isCancelled()
-	 * @see AsyncTaskDelegate#onCancelled(Object)
+	 * @see AsyncTask.Delegate#onCancelled(Object)
 	 */
 	public final boolean cancel(boolean mayInterruptIfRunning) {
 		mCancelled.set(true);
