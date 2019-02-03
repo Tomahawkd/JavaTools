@@ -75,6 +75,7 @@ public abstract class AsyncTask<Result> extends Observable {
 		 * @see #doInBackground
 		 * @see #onCancelled(Object)
 		 */
+		@SuppressWarnings("UnusedParameters")
 		default void onPostExecute(Result result) {}
 
 		/**
@@ -90,6 +91,7 @@ public abstract class AsyncTask<Result> extends Observable {
 		 * @see #cancel(boolean)
 		 * @see #isCancelled()
 		 */
+		@SuppressWarnings("UnusedParameters")
 		default void onCancelled(Result result) {
 			onCancelled();
 		}
